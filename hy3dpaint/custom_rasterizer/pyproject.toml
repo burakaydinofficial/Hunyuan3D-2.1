@@ -1,0 +1,22 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "torch==2.5.1",
+    "ninja==1.11.1.1",
+    "pybind11==2.13.4"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "custom_rasterizer"
+version = "0.1"
+description = "Custom rasterizer for Hunyuan3D"
+dependencies = [
+    "torch==2.5.1",
+    "ninja==1.11.1.1",
+    "pybind11==2.13.4"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
