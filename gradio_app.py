@@ -801,7 +801,7 @@ if __name__ == '__main__':
             # Configure texture generation based on memory requirements
             if hasattr(args, 'half_resolution_texturing') and args.half_resolution_texturing:
                 # Use memory-optimized settings for 24GB VRAM
-                conf = Hunyuan3DPaintConfig(max_num_view=4, resolution=512)
+                conf = Hunyuan3DPaintConfig(max_num_view=8, resolution=512)
                 # Override high-memory settings
                 conf.render_size = 1024      # Default: 2048
                 conf.texture_size = 2048     # Default: 4096
