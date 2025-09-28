@@ -747,6 +747,7 @@ if __name__ == '__main__':
     parser.add_argument('--enable_flashvdm', action='store_true')
     parser.add_argument('--compile', action='store_true')
     parser.add_argument('--low_vram_mode', action='store_true')
+    parser.add_argument('--half-resolution-texturing', action='store_true', help='Use half resolution settings for texture generation to reduce VRAM usage')
     args = parser.parse_args()
     
     SAVE_DIR = args.cache_path
@@ -796,7 +797,17 @@ if __name__ == '__main__':
             #     texgen_worker.enable_model_cpu_offload()
 
             from hy3dpaint.textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
-            conf = Hunyuan3DPaintConfig(max_num_view=8, resolution=768)
+            
+            # Configure texture generation based on memory requirements
+            if hasattr(args, 'half_resolution_texturing') and args.half_resolution_texturing:
+                # Use memory-optimized settings for 24GB VRAM
+                conf = Hunyuan3DPaintConfig(max_num_view=4, resolution=512)
+                # Override high-memory settings
+                conf.render_size = 1024      # Default: 2048
+                conf.texture_size = 2048     # Default: 4096
+            else:
+                conf = Hunyuan3DPaintConfig(max_num_view=8, resolution=768)
+            
             conf.realesrgan_ckpt_path = "hy3dpaint/ckpt/RealESRGAN_x4plus.pth"
             conf.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"
             conf.custom_pipeline = "hy3dpaint/hunyuanpaintpbr"
