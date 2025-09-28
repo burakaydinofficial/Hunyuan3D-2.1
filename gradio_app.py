@@ -181,6 +181,40 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
     return seed
 
 
+def get_texture_files(textured_mesh_path):
+    """Find and return texture files associated with a textured mesh."""
+    if not textured_mesh_path or not os.path.exists(textured_mesh_path):
+        return None, None, None, None
+    
+    base_path = textured_mesh_path.rsplit('.', 1)[0]  # Remove extension
+    
+    # Look for texture files in the same folder
+    texture_files = {
+        'diffuse': None,
+        'metallic': None, 
+        'roughness': None,
+        'normal': None
+    }
+    
+    # Check for common texture file patterns
+    patterns = [
+        ('diffuse', ['.jpg', '.png']),
+        ('metallic', ['_metallic.jpg', '_metallic.png']),
+        ('roughness', ['_roughness.jpg', '_roughness.png']),
+        ('normal', ['_normal.jpg', '_normal.png'])
+    ]
+    
+    for texture_type, extensions in patterns:
+        for ext in extensions:
+            potential_path = base_path + ext
+            if os.path.exists(potential_path):
+                texture_files[texture_type] = potential_path
+                break
+    
+    return (texture_files['diffuse'], texture_files['metallic'], 
+            texture_files['roughness'], texture_files['normal'])
+
+
 def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
     # Remove first folder from path to make relative path
     if textured:
@@ -394,6 +428,10 @@ def generation_all(
     model_viewer_html_textured = build_model_viewer_html(save_folder, 
                                                          height=HTML_HEIGHT, 
                                                          width=HTML_WIDTH, textured=True)
+    
+    # Get texture files for download
+    diffuse_file, metallic_file, roughness_file, normal_file = get_texture_files(path_textured)
+    
     if args.low_vram_mode:
         torch.cuda.empty_cache()
     return (
@@ -402,6 +440,10 @@ def generation_all(
         model_viewer_html_textured,
         stats,
         seed,
+        gr.update(value=diffuse_file, visible=diffuse_file is not None),
+        gr.update(value=metallic_file, visible=metallic_file is not None),
+        gr.update(value=roughness_file, visible=roughness_file is not None),
+        gr.update(value=normal_file, visible=normal_file is not None),
     )
 
 @spaces.GPU(duration=60)
@@ -523,6 +565,16 @@ def build_app():
                     file_out = gr.File(label="File", visible=False)
                     file_out2 = gr.File(label="File", visible=False)
 
+                # Texture download section
+                with gr.Group(visible=False) as texture_downloads_group:
+                    gr.Markdown("### Download Individual Textures")
+                    with gr.Row():
+                        texture_diffuse = gr.File(label="Diffuse/Albedo", visible=False)
+                        texture_metallic = gr.File(label="Metallic", visible=False)
+                    with gr.Row():
+                        texture_roughness = gr.File(label="Roughness", visible=False)
+                        texture_normal = gr.File(label="Normal", visible=False)
+
                 with gr.Tabs(selected='tab_options' if TURBO_MODE else 'tab_export'):
                     with gr.Tab("Options", id='tab_options', visible=TURBO_MODE):
                         gen_mode = gr.Radio(
@@ -625,8 +677,8 @@ Fast for very complex cases, Standard seldom use.',
             outputs=[file_out, html_gen_mesh, stats, seed]
         ).then(
             lambda: (gr.update(visible=False, value=False), gr.update(interactive=True), gr.update(interactive=True),
-                     gr.update(interactive=False)),
-            outputs=[export_texture, reduce_face, confirm_export, file_export],
+                     gr.update(interactive=False), gr.update(visible=False)),
+            outputs=[export_texture, reduce_face, confirm_export, file_export, texture_downloads_group],
         ).then(
             lambda: gr.update(selected='gen_mesh_panel'),
             outputs=[tabs_output],
@@ -649,11 +701,12 @@ Fast for very complex cases, Standard seldom use.',
                 num_chunks,
                 randomize_seed,
             ],
-            outputs=[file_out, file_out2, html_gen_mesh, stats, seed]
+            outputs=[file_out, file_out2, html_gen_mesh, stats, seed, 
+                    texture_diffuse, texture_metallic, texture_roughness, texture_normal]
         ).then(
             lambda: (gr.update(visible=True, value=True), gr.update(interactive=False), gr.update(interactive=True),
-                     gr.update(interactive=False)),
-            outputs=[export_texture, reduce_face, confirm_export, file_export],
+                     gr.update(interactive=False), gr.update(visible=True)),
+            outputs=[export_texture, reduce_face, confirm_export, file_export, texture_downloads_group],
         ).then(
             lambda: gr.update(selected='gen_mesh_panel'),
             outputs=[tabs_output],
